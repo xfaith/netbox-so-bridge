@@ -1,1 +1,6 @@
+# NetBox ↔ Security Onion bridge helpers
+# Install with visudo into /etc/sudoers.d/netbox-so-bridge
+
+netbox-sync ALL=(root) NOPASSWD: /usr/local/sbin/netbox-so-observe --hours *
 netbox-sync ALL=(root) NOPASSWD: /usr/local/sbin/netbox-so-topology --hours *
+netbox-sync ALL=(root) NOPASSWD: /usr/local/sbin/update-so-ip-mappings.sh /home/netbox-sync/ip-descriptions.csv.tmp
