@@ -1,0 +1,26 @@
+# Runtime configuration / secrets
+.env
+env
+
+# SSH private material
+.ssh-container/
+*.pem
+*.key
+
+# Generated bridge data
+data/*
+!data/.gitkeep
+!data/topology/
+data/topology/*
+!data/topology/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
