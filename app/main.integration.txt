@@ -1,0 +1,13 @@
+# Add after the existing NetBox records are retrieved and the existing
+# ip-descriptions.csv generation completes.
+# This is intentionally isolated so topology failure does not break the
+# established NetBox -> Security Onion mapping workflow.
+
+if env_bool("TOPOLOGY_ENABLED", default=False):
+    try:
+        from topology_phase import run_topology_phase
+        log.info("Running topology and sensor coverage phase")
+        summary = run_topology_phase(addresses)
+        log.info("Topology phase complete: %s", summary)
+    except Exception:
+        log.exception("Topology phase failed; continuing normal mapping workflow")

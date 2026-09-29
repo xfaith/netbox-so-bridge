@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+import argparse
+import ipaddress
+import json
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+CONN_LOG = Path("/nsm/zeek/logs/current/conn.log")
+
+
+def args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--hours", type=int, default=24)
+    return p.parse_args()
+
+
+def ts(v):
+    try:
+        return datetime.fromtimestamp(float(v), tz=timezone.utc)
+    except Exception:
+        return None
+
+
+def iso(v):
+    return v.astimezone(timezone.utc).isoformat().replace("+00:00", "Z") if v else ""
+
+
+def int0(v):
+    try: return int(v)
+    except Exception: return 0
+
+
+def port(v):
+    try: return int(v)
+    except Exception: return None
+
+
+def main():
+    a = args()
+    if a.hours < 1 or a.hours > 720:
+        raise SystemExit("--hours must be between 1 and 720")
+    if not CONN_LOG.exists():
+        raise SystemExit(f"Missing {CONN_LOG}")
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=a.hours)
+    observations = {}
+    edges = {}
+
+    with CONN_LOG.open("r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                x = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            when = ts(x.get("ts"))
+            if not when or when < cutoff:
+                continue
+            src = str(x.get("id.orig_h") or "")
+            dst = str(x.get("id.resp_h") or "")
+            try:
+                ipaddress.ip_address(src); ipaddress.ip_address(dst)
+            except ValueError:
+                continue
+
+            for ip in (src, dst):
+                o = observations.setdefault(ip, {"ip":ip,"first_seen":when,"last_seen":when,"connections":0})
+                o["connections"] += 1
+                o["first_seen"] = min(o["first_seen"], when)
+                o["last_seen"] = max(o["last_seen"], when)
+
+            dport = port(x.get("id.resp_p"))
+            proto = str(x.get("proto") or "")
+            service = str(x.get("service") or "")
+            key = (src,dst,dport,proto,service)
+            e = edges.setdefault(key, {"source_ip":src,"destination_ip":dst,"destination_port":dport,"protocol":proto,"service":service,"connections":0,"bytes_total":0,"first_seen":when,"last_seen":when})
+            e["connections"] += 1
+            e["bytes_total"] += max(0,int0(x.get("orig_bytes"))) + max(0,int0(x.get("resp_bytes")))
+            e["first_seen"] = min(e["first_seen"], when)
+            e["last_seen"] = max(e["last_seen"], when)
+
+    obs_out = [{**o,"first_seen":iso(o["first_seen"]),"last_seen":iso(o["last_seen"])} for o in observations.values()]
+    edge_out = [{**e,"first_seen":iso(e["first_seen"]),"last_seen":iso(e["last_seen"])} for e in edges.values()]
+    print(json.dumps({"window_hours":a.hours,"observation_count":len(obs_out),"edge_count":len(edge_out),"observations":obs_out,"edges":edge_out}, separators=(",",":")))
+
+
+if __name__ == "__main__":
+    main()

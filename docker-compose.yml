@@ -1,0 +1,20 @@
+services:
+  netbox-so-bridge:
+    build: .
+    container_name: netbox-so-bridge
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./data:/data/
+      - ./.ssh-container:/home/bridge/.ssh:ro
+      - ./config:/config:ro
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      -  ALL

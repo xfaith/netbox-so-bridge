@@ -1,0 +1,1 @@
+netbox-sync ALL=(root) NOPASSWD: /usr/local/sbin/netbox-so-topology --hours *

@@ -1,0 +1,14 @@
+sensors:
+  - name: so-home
+    tap: tap-home
+    host: 192.168.50.229
+    port: 22
+    user: netbox-sync
+    ssh_key: /home/bridge/.ssh/id_ed25519
+    helper: /usr/local/sbin/netbox-so-topology
+    expected_networks:
+      - 192.168.50.0/24
+
+# Add future independent sensors/TAPs as additional entries.
+# Only put a subnet in expected_networks if that sensor is actually expected
+# to see that subnet. Otherwise partial-coverage findings will be misleading.
